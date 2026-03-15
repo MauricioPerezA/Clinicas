@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Onboarding — ClínicasBot</title>
+    <meta name="description" content="Configura tu Chatbot de WhatsApp para tu clínica en minutos. Formulario de implementación ClínicasBot.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #070b14;
+            --surface: rgba(255,255,255,0.04);
+            --surface-2: rgba(255,255,255,0.07);
+            --border: rgba(255,255,255,0.08);
+            --border-focus: rgba(37,211,102,0.5);
+            --green: #25D366;
+            --green-dim: #128C7E;
+            --green-glow: rgba(37,211,102,0.12);
+            --green-soft: rgba(37,211,102,0.08);
+            --yellow: #F59E0B;
+            --red: #EF4444;
+            --text: #F1F5F9;
+            --text-muted: #64748B;
+            --text-dim: #94A3B8;
+            --radius: 16px;
+            --radius-sm: 10px;
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+        body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(37,211,102,0.04) 0%,transparent 60%);pointer-events:none}
+
+        /* HEADER */
+        .header{background:rgba(10,15,25,0.95);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;backdrop-filter:blur(20px);position:sticky;top:0;z-index:50}
+        .logo{display:flex;align-items:center;gap:10px}
+        .logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--green),var(--green-dim));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
+        .logo span{font-weight:800;font-size:14px}
+        .header-right{font-size:12px;color:var(--text-muted)}
+
+        /* PROGRESS BAR */
+        .progress-wrap{padding:20px 24px 0;max-width:640px;margin:0 auto}
+        .progress-bar-bg{height:6px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden;margin-bottom:8px}
+        .progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--green-dim));border-radius:99px;transition:width 0.5s cubic-bezier(.4,0,.2,1)}
+        .progress-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted)}
+        .progress-labels .active{color:var(--green);font-weight:600}
+
+        /* CONTAINER */
+        .wizard-container{max-width:640px;margin:0 auto;padding:32px 24px 100px;position:relative}
+
+        /* STEP */
+        .step{display:none;animation:fadeIn 0.4s ease}
+        .step.active{display:block}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+        .step-icon{font-size:48px;margin-bottom:16px}
+        .step-title{font-size:24px;font-weight:800;margin-bottom:6px;line-height:1.2}
+        .step-title span{color:var(--green)}
+        .step-desc{font-size:14px;color:var(--text-dim);margin-bottom:28px;line-height:1.6}
+
+        /* FORM ELEMENTS */
+        .form-group{margin-bottom:20px}
+        .form-label{display:block;font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:6px}
+        .form-label .req{color:var(--green);margin-left:2px}
+        .form-input,.form-select{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;transition:border-color 0.2s,box-shadow 0.2s;outline:none}
+        .form-input:focus,.form-select:focus{border-color:var(--border-focus);box-shadow:0 0 0 3px rgba(37,211,102,0.1)}
+        .form-input::placeholder{color:var(--text-muted)}
+        .form-input.error{border-color:var(--red);box-shadow:0 0 0 3px rgba(239,68,68,0.1)}
+        .form-select option{background:#0f1624}
+        .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+        .error-msg{font-size:11px;color:var(--red);margin-top:4px;display:none}
+        .error-msg.show{display:block}
+
+        /* CHIP SELECTOR (Days) */
+        .chip-group{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+        .chip{padding:10px 16px;border-radius:99px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s;user-select:none}
+        .chip:hover{border-color:rgba(255,255,255,0.15);background:var(--surface-2)}
+        .chip.selected{background:var(--green-glow);border-color:rgba(37,211,102,0.4);color:var(--green);font-weight:600}
+
+        /* SERVICES LIST */
+        .service-list{display:flex;flex-direction:column;gap:10px}
+        .service-item{display:flex;gap:10px;align-items:center;animation:fadeIn 0.3s ease}
+        .service-item .form-input{flex:1}
+        .service-item .dur-input{width:110px;flex:none}
+        .btn-remove{width:36px;height:36px;border-radius:50%;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.08);color:var(--red);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0}
+        .btn-remove:hover{background:rgba(239,68,68,0.15)}
+        .btn-add{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:var(--radius-sm);border:1px dashed rgba(37,211,102,0.3);background:var(--green-soft);color:var(--green);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:inherit;margin-top:4px}
+        .btn-add:hover{background:var(--green-glow);border-color:rgba(37,211,102,0.5)}
+
+        /* RADIO CARDS */
+        .radio-group{display:flex;gap:10px;flex-wrap:wrap}
+        .radio-card{flex:1;min-width:120px;padding:14px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all 0.2s;text-align:center}
+        .radio-card:hover{border-color:rgba(255,255,255,0.15)}
+        .radio-card.selected{background:var(--green-glow);border-color:rgba(37,211,102,0.4)}
+        .radio-card .rc-icon{font-size:24px;margin-bottom:6px}
+        .radio-card .rc-label{font-size:13px;font-weight:600;color:var(--text)}
+        .radio-card .rc-desc{font-size:11px;color:var(--text-muted);margin-top:2px}
+
+        /* FAQ */
+        .faq-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px}
+        .faq-item .form-input{margin-top:8px}
+        .faq-item .form-label{margin-bottom:0}
+
+        /* NAV BUTTONS */
+        .nav-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(10,15,25,0.95);border-top:1px solid var(--border);backdrop-filter:blur(20px);padding:14px 24px;z-index:50}
+        .nav-inner{max-width:640px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:12px}
+        .btn{padding:12px 28px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:inherit;border:none}
+        .btn-back{background:var(--surface);border:1px solid var(--border);color:var(--text-dim)}
+        .btn-back:hover{background:var(--surface-2);color:var(--text)}
+        .btn-next{background:linear-gradient(135deg,var(--green),var(--green-dim));color:white;box-shadow:0 4px 15px rgba(37,211,102,0.25)}
+        .btn-next:hover{opacity:0.9;transform:translateY(-1px)}
+        .btn-next:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+        .btn-next.sending{pointer-events:none;opacity:0.6}
+        .step-indicator{font-size:12px;color:var(--text-muted);font-weight:500}
+
+        /* SUMMARY */
+        .summary-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px}
+        .summary-card h4{font-size:13px;font-weight:700;color:var(--green);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+        .summary-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px}
+        .summary-row:last-child{border-bottom:none}
+        .summary-row .label{color:var(--text-muted)}
+        .summary-row .value{font-weight:500;text-align:right;max-width:60%}
+
+        /* SUCCESS */
+        .success-screen{text-align:center;padding:60px 20px}
+        .success-icon{font-size:72px;margin-bottom:20px;animation:bounceIn 0.6s ease}
+        @keyframes bounceIn{0%{transform:scale(0)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+        .success-screen h2{font-size:28px;font-weight:800;margin-bottom:8px}
+        .success-screen h2 span{color:var(--green)}
+        .success-screen p{color:var(--text-dim);font-size:14px;line-height:1.7;max-width:400px;margin:0 auto 24px}
+        .success-badge{display:inline-flex;align-items:center;gap:8px;background:var(--green-glow);border:1px solid rgba(37,211,102,0.25);border-radius:99px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--green)}
+
+        /* ALERT */
+        .info-alert{display:flex;gap:10px;padding:12px 14px;border-radius:var(--radius-sm);background:rgba(37,211,102,0.06);border:1px solid rgba(37,211,102,0.15);font-size:12px;color:var(--text-dim);margin-bottom:20px;line-height:1.5}
+        .info-alert .ai{font-size:16px;flex-shrink:0;margin-top:1px}
+
+        /* RESPONSIVE */
+        @media(max-width:500px){
+            .form-row{grid-template-columns:1fr}
+            .radio-group{flex-direction:column}
+            .step-title{font-size:20px}
+            .wizard-container{padding:24px 16px 100px}
+        }
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+    <div class="logo"><div class="logo-icon">🤖</div><span>ClínicasBot</span></div>
+    <div class="header-right">Formulario de Implementación</div>
+</header>
+
+<!-- PROGRESS -->
+<div class="progress-wrap">
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar" style="width:20%"></div></div>
+    <div class="progress-labels">
+        <span class="active" id="pl-1">Clínica</span>
+        <span id="pl-2">Horarios</span>
+        <span id="pl-3">Servicios</span>
+        <span id="pl-4">WhatsApp</span>
+        <span id="pl-5">Personalización</span>
+    </div>
+</div>
+
+<!-- WIZARD -->
+<div class="wizard-container">
+
+    <!-- STEP 1: CLÍNICA -->
+    <div class="step active" id="step-1">
+        <div class="step-icon">🏥</div>
+        <h2 class="step-title">Cuéntanos sobre <span>tu clínica</span></h2>
+        <p class="step-desc">Solo necesitamos lo básico para empezar a configurar tu bot.</p>
+        <div class="form-group">
+            <label class="form-label">Nombre de la clínica<span class="req">*</span></label>
+            <input class="form-input" id="f-nombre" placeholder="Ej: Clínica Santa María" autocomplete="organization">
+            <div class="error-msg" id="err-nombre">Este campo es obligatorio</div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Ciudad<span class="req">*</span></label>
+            <input class="form-input" id="f-ciudad" placeholder="Ej: Santiago, Valparaíso, Concepción…" autocomplete="address-level2">
+            <div class="error-msg" id="err-ciudad">Este campo es obligatorio</div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Dirección <span style="color:var(--text-muted);font-weight:400">(opcional)</span></label>
+            <input class="form-input" id="f-direccion" placeholder="Ej: Av. Providencia 1234" autocomplete="street-address">
+        </div>
+    </div>
+
+    <!-- STEP 2: HORARIOS -->
+    <div class="step" id="step-2">
+        <div class="step-icon">🕐</div>
+        <h2 class="step-title">¿Cuándo <span>atienden</span>?</h2>
+        <p class="step-desc">El bot solo ofrecerá citas dentro de estos horarios.</p>
+        <div class="form-group">
+            <label class="form-label">Días de atención<span class="req">*</span></label>
+            <div class="chip-group" id="dias-chips">
+                <div class="chip" data-day="1">Lun</div>
+                <div class="chip" data-day="2">Mar</div>
+                <div class="chip" data-day="3">Mié</div>
+                <div class="chip" data-day="4">Jue</div>
+                <div class="chip" data-day="5">Vie</div>
+                <div class="chip" data-day="6">Sáb</div>
+                <div class="chip" data-day="0">Dom</div>
+            </div>
+            <div class="error-msg" id="err-dias">Selecciona al menos un día</div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">¿Horario corrido o con pausa de almuerzo?</label>
+            <div class="radio-group" id="horario-tipo">
+                <div class="radio-card selected" data-val="corrido" onclick="selectRadio(this,'horario-tipo')">
+                    <div class="rc-icon">☀️</div>
+                    <div class="rc-label">Corrido</div>
+                    <div class="rc-desc">Sin pausa</div>
+                </div>
+                <div class="radio-card" data-val="pausado" onclick="selectRadio(this,'horario-tipo')">
+                    <div class="rc-icon">🌗</div>
+                    <div class="rc-label">Con pausa</div>
+                    <div class="rc-desc">Mañana y tarde</div>
+                </div>
+            </div>
+        </div>
+        <div id="horario-fields">
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Hora de inicio<span class="req">*</span></label>
+                    <input class="form-input" type="time" id="f-hora-inicio" value="09:00">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Hora de término<span class="req">*</span></label>
+                    <input class="form-input" type="time" id="f-hora-fin" value="19:00">
+                </div>
+            </div>
+        </div>
+        <div id="horario-pausado" style="display:none">
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Mañana: inicio<span class="req">*</span></label>
+                    <input class="form-input" type="time" id="f-man-inicio" value="09:00">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mañana: término<span class="req">*</span></label>
+                    <input class="form-input" type="time" id="f-man-fin" value="13:00">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Tarde: inicio<span class="req">*</span></label>
+                    <input class="form-input" type="time" id="f-tar-inicio" value="15:00">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tarde: término<span class="req">*</span></label>
+                    <input class="form-input" type="time" id="f-tar-fin" value="19:00">
+                </div>
+            </div>
+        </div>
+        <div class="form-group" style="margin-top:6px">
+            <label class="form-label">Duración de cada cita<span class="req">*</span></label>
+            <select class="form-select" id="f-duracion">
+                <option value="15">15 minutos</option>
+                <option value="30" selected>30 minutos</option>
+                <option value="45">45 minutos</option>
+                <option value="60">1 hora</option>
+                <option value="90">1 hora 30 min</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- STEP 3: SERVICIOS -->
+    <div class="step" id="step-3">
+        <div class="step-icon">💊</div>
+        <h2 class="step-title">¿Qué <span>servicios</span> ofreces?</h2>
+        <p class="step-desc">El bot mostrará estos servicios como opciones al paciente. Agrega al menos uno.</p>
+        <div class="service-list" id="service-list">
+            <div class="service-item">
+                <input class="form-input" placeholder="Ej: Medicina General" data-svc>
+                <input class="form-input dur-input" placeholder="Duración" title="Solo si difiere de la duración estándar" data-dur>
+                <button class="btn-remove" onclick="removeService(this)" title="Eliminar">✕</button>
+            </div>
+        </div>
+        <button class="btn-add" onclick="addService()">+ Agregar servicio</button>
+        <div class="error-msg" id="err-servicios" style="margin-top:10px">Agrega al menos un servicio</div>
+    </div>
+
+    <!-- STEP 4: WHATSAPP & CALENDAR -->
+    <div class="step" id="step-4">
+        <div class="step-icon">📱</div>
+        <h2 class="step-title"><span>WhatsApp</span> & Calendar</h2>
+        <p class="step-desc">Necesitamos estos datos para conectar tu bot y tu agenda.</p>
+        <div class="info-alert">
+            <div class="ai">ℹ️</div>
+            <div><strong style="color:var(--text)">Modo coexistencia:</strong> El bot y tu recepción usan el mismo WhatsApp al mismo tiempo. El número debe ser del negocio (no personal).</div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Número WhatsApp del bot<span class="req">*</span></label>
+            <input class="form-input" id="f-wa-bot" placeholder="+56 9 XXXX XXXX" autocomplete="tel">
+            <div class="error-msg" id="err-wa-bot">Ingresa un número de WhatsApp válido</div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Correo Gmail (para Google Calendar)<span class="req">*</span></label>
+            <input class="form-input" id="f-gmail" placeholder="miclinica@gmail.com" type="email" autocomplete="email">
+            <div class="error-msg" id="err-gmail">Ingresa un correo Gmail válido</div>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:24px 0">
+        <p style="font-size:13px;font-weight:600;margin-bottom:14px;color:var(--text-dim)">📞 ¿A quién avisa el bot en caso de urgencia?</p>
+        <div class="form-group">
+            <label class="form-label">Nombre del responsable<span class="req">*</span></label>
+            <input class="form-input" id="f-resp-nombre" placeholder="Ej: Carla Rojas — Recepción">
+            <div class="error-msg" id="err-resp-nombre">Este campo es obligatorio</div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">WhatsApp del responsable<span class="req">*</span></label>
+            <input class="form-input" id="f-resp-wa" placeholder="+56 9 XXXX XXXX" autocomplete="tel">
+            <div class="error-msg" id="err-resp-wa">Ingresa un número válido</div>
+        </div>
+    </div>
+
+    <!-- STEP 5: PERSONALIZACIÓN -->
+    <div class="step" id="step-5">
+        <div class="step-icon">🤖</div>
+        <h2 class="step-title"><span>Personaliza</span> tu bot</h2>
+        <p class="step-desc">Dale identidad a tu asistente virtual. Todo tiene un valor por defecto si prefieres dejarlo así.</p>
+        <div class="form-group">
+            <label class="form-label">Tono de comunicación</label>
+            <div class="radio-group" id="tono-grupo">
+                <div class="radio-card" data-val="formal" onclick="selectRadio(this,'tono-grupo')">
+                    <div class="rc-icon">👔</div>
+                    <div class="rc-label">Formal</div>
+                </div>
+                <div class="radio-card selected" data-val="semiformal" onclick="selectRadio(this,'tono-grupo')">
+                    <div class="rc-icon">🤝</div>
+                    <div class="rc-label">Semiformal</div>
+                </div>
+                <div class="radio-card" data-val="cercano" onclick="selectRadio(this,'tono-grupo')">
+                    <div class="rc-icon">😊</div>
+                    <div class="rc-label">Cercano</div>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">¿Tratar de tú o de usted?</label>
+            <div class="radio-group" id="trato-grupo">
+                <div class="radio-card selected" data-val="tu" onclick="selectRadio(this,'trato-grupo')">
+                    <div class="rc-label">Tú</div>
+                </div>
+                <div class="radio-card" data-val="usted" onclick="selectRadio(this,'trato-grupo')">
+                    <div class="rc-label">Usted</div>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Nombre del bot <span style="color:var(--text-muted);font-weight:400">(opcional)</span></label>
+            <input class="form-input" id="f-bot-nombre" placeholder="Ej: Sofía, MediBot… o dejamos 'Asistente de tu clínica'">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Preguntas frecuentes <span style="color:var(--text-muted);font-weight:400">(opcional, hasta 3)</span></label>
+            <div id="faq-list">
+                <div class="faq-item">
+                    <label class="form-label" style="font-size:11px">Pregunta 1</label>
+                    <input class="form-input" placeholder="Ej: ¿Dónde están ubicados?" data-faq-q>
+                    <input class="form-input" placeholder="Respuesta…" data-faq-a>
+                </div>
+            </div>
+            <button class="btn-add" onclick="addFaq()" id="btn-add-faq">+ Agregar pregunta</button>
+        </div>
+    </div>
+
+    <!-- STEP 6: RESUMEN -->
+    <div class="step" id="step-6">
+        <div class="step-icon">📋</div>
+        <h2 class="step-title">Revisa tu <span>información</span></h2>
+        <p class="step-desc">Confirma que todo esté correcto antes de enviar.</p>
+        <div id="summary-content"></div>
+    </div>
+
+    <!-- SUCCESS -->
+    <div class="step" id="step-success" style="display:none">
+        <div class="success-screen">
+            <div class="success-icon">🎉</div>
+            <h2>¡<span>Listo</span>!</h2>
+            <p>Recibimos tu información correctamente. Nos pondremos en contacto contigo dentro de las próximas <strong>48 horas</strong> para coordinar la configuración de tu bot.</p>
+            <div class="success-badge">✅ Formulario enviado exitosamente</div>
+        </div>
+    </div>
+</div>
+
+<!-- NAV BAR -->
+<div class="nav-bar" id="nav-bar">
+    <div class="nav-inner">
+        <button class="btn btn-back" id="btn-prev" onclick="prevStep()" style="visibility:hidden">← Atrás</button>
+        <span class="step-indicator" id="step-indicator">Paso 1 de 6</span>
+        <button class="btn btn-next" id="btn-next" onclick="nextStep()">Siguiente →</button>
+    </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// WIZARD ENGINE
+// ═══════════════════════════════════════════════
+const TOTAL_STEPS = 6;
+let currentStep = 1;
+const STORAGE_KEY = 'clinicasbot_onboarding';
+
+// Restore from localStorage
+document.addEventListener('DOMContentLoaded', () => {
+    restoreProgress();
+    setupChips();
+    setupRadioToggle();
+});
+
+// ── NAVIGATION ──
+function goToStep(n) {
+    document.querySelectorAll('.step').forEach(s => { s.classList.remove('active'); s.style.display = ''; });
+    const target = document.getElementById('step-' + n);
+    if (target) { target.classList.add('active'); }
+    currentStep = n;
+
+    // Progress bar
+    const pct = Math.round((n / TOTAL_STEPS) * 100);
+    document.getElementById('progressBar').style.width = pct + '%';
+
+    // Labels
+    for (let i = 1; i <= 5; i++) {
+        const el = document.getElementById('pl-' + i);
+        if (el) el.className = i <= n ? 'active' : '';
+    }
+
+    // Nav buttons
+    document.getElementById('btn-prev').style.visibility = n === 1 ? 'hidden' : 'visible';
+    document.getElementById('step-indicator').textContent = `Paso ${n} de ${TOTAL_STEPS}`;
+
+    if (n === TOTAL_STEPS) {
+        document.getElementById('btn-next').textContent = '✅ Enviar formulario';
+        buildSummary();
+    } else {
+        document.getElementById('btn-next').textContent = 'Siguiente →';
+    }
+
+    saveProgress();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function nextStep() {
+    if (!validateStep(currentStep)) return;
+    if (currentStep === TOTAL_STEPS) { submitForm(); return; }
+    goToStep(currentStep + 1);
+}
+
+function prevStep() {
+    if (currentStep > 1) goToStep(currentStep - 1);
+}
+
+// ── VALIDATION ──
+function validateStep(n) {
+    clearErrors();
+    let valid = true;
+    if (n === 1) {
+        if (!val('f-nombre')) { showErr('err-nombre'); valid = false; }
+        if (!val('f-ciudad')) { showErr('err-ciudad'); valid = false; }
+    } else if (n === 2) {
+        if (getSelectedDays().length === 0) { showErr('err-dias'); valid = false; }
+    } else if (n === 3) {
+        const svcs = getServices();
+        if (svcs.length === 0 || !svcs.some(s => s.nombre.trim())) { showErr('err-servicios'); valid = false; }
+    } else if (n === 4) {
+        if (!val('f-wa-bot')) { showErr('err-wa-bot'); valid = false; }
+        if (!val('f-gmail') || !val('f-gmail').includes('@')) { showErr('err-gmail'); valid = false; }
+        if (!val('f-resp-nombre')) { showErr('err-resp-nombre'); valid = false; }
+        if (!val('f-resp-wa')) { showErr('err-resp-wa'); valid = false; }
+    }
+    return valid;
+}
+
+function val(id) { return document.getElementById(id).value.trim(); }
+function showErr(id) { const el = document.getElementById(id); if(el) { el.classList.add('show'); el.previousElementSibling?.classList.add('error'); } }
+function clearErrors() { document.querySelectorAll('.error-msg').forEach(e => e.classList.remove('show')); document.querySelectorAll('.form-input.error').forEach(e => e.classList.remove('error')); }
+
+// ── CHIPS (Days) ──
+function setupChips() {
+    document.querySelectorAll('#dias-chips .chip').forEach(c => {
+        c.addEventListener('click', () => c.classList.toggle('selected'));
+    });
+}
+function getSelectedDays() {
+    return [...document.querySelectorAll('#dias-chips .chip.selected')].map(c => ({
+        num: parseInt(c.dataset.day), label: c.textContent
+    }));
+}
+
+// ── RADIO CARDS ──
+function selectRadio(el, groupId) {
+    document.querySelectorAll('#' + groupId + ' .radio-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    if (groupId === 'horario-tipo') toggleHorario();
+}
+function getRadioVal(groupId) {
+    const sel = document.querySelector('#' + groupId + ' .radio-card.selected');
+    return sel ? sel.dataset.val : '';
+}
+
+function setupRadioToggle() { toggleHorario(); }
+function toggleHorario() {
+    const tipo = getRadioVal('horario-tipo');
+    document.getElementById('horario-fields').style.display = tipo === 'corrido' ? '' : 'none';
+    document.getElementById('horario-pausado').style.display = tipo === 'pausado' ? '' : 'none';
+}
+
+// ── SERVICES ──
+function addService() {
+    const list = document.getElementById('service-list');
+    const item = document.createElement('div');
+    item.className = 'service-item';
+    item.innerHTML = '<input class="form-input" placeholder="Nombre del servicio" data-svc><input class="form-input dur-input" placeholder="Duración" data-dur><button class="btn-remove" onclick="removeService(this)" title="Eliminar">✕</button>';
+    list.appendChild(item);
+}
+function removeService(btn) {
+    const list = document.getElementById('service-list');
+    if (list.children.length > 1) btn.parentElement.remove();
+}
+function getServices() {
+    return [...document.querySelectorAll('.service-item')].map(item => ({
+        nombre: item.querySelector('[data-svc]').value.trim(),
+        duracion: item.querySelector('[data-dur]').value.trim()
+    })).filter(s => s.nombre);
+}
+
+// ── FAQ ──
+let faqCount = 1;
+function addFaq() {
+    if (faqCount >= 3) return;
+    faqCount++;
+    const list = document.getElementById('faq-list');
+    const faq = document.createElement('div');
+    faq.className = 'faq-item';
+    faq.innerHTML = `<label class="form-label" style="font-size:11px">Pregunta ${faqCount}</label><input class="form-input" placeholder="Pregunta…" data-faq-q><input class="form-input" placeholder="Respuesta…" data-faq-a>`;
+    list.appendChild(faq);
+    if (faqCount >= 3) document.getElementById('btn-add-faq').style.display = 'none';
+}
+function getFaqs() {
+    return [...document.querySelectorAll('.faq-item')].map(f => ({
+        pregunta: f.querySelector('[data-faq-q]').value.trim(),
+        respuesta: f.querySelector('[data-faq-a]').value.trim()
+    })).filter(f => f.pregunta);
+}
+
+// ── SUMMARY ──
+function buildSummary() {
+    const dias = getSelectedDays().map(d => d.label).join(', ');
+    const tipo = getRadioVal('horario-tipo');
+    let horario = '';
+    if (tipo === 'corrido') { horario = val('f-hora-inicio') + ' — ' + val('f-hora-fin'); }
+    else { horario = val('f-man-inicio') + '–' + val('f-man-fin') + ' y ' + val('f-tar-inicio') + '–' + val('f-tar-fin'); }
+    const svcs = getServices().map(s => s.nombre + (s.duracion ? ` (${s.duracion})` : '')).join(', ');
+    const tono = getRadioVal('tono-grupo');
+    const trato = getRadioVal('trato-grupo');
+
+    document.getElementById('summary-content').innerHTML = `
+        <div class="summary-card"><h4>🏥 Clínica</h4>
+            <div class="summary-row"><span class="label">Nombre</span><span class="value">${val('f-nombre')}</span></div>
+            <div class="summary-row"><span class="label">Ciudad</span><span class="value">${val('f-ciudad')}</span></div>
+            ${val('f-direccion') ? `<div class="summary-row"><span class="label">Dirección</span><span class="value">${val('f-direccion')}</span></div>` : ''}
+        </div>
+        <div class="summary-card"><h4>🕐 Horarios</h4>
+            <div class="summary-row"><span class="label">Días</span><span class="value">${dias}</span></div>
+            <div class="summary-row"><span class="label">Horario</span><span class="value">${horario}</span></div>
+            <div class="summary-row"><span class="label">Duración cita</span><span class="value">${val('f-duracion')} min</span></div>
+        </div>
+        <div class="summary-card"><h4>💊 Servicios</h4>
+            <div class="summary-row"><span class="label">Servicios</span><span class="value">${svcs || '—'}</span></div>
+        </div>
+        <div class="summary-card"><h4>📱 WhatsApp & Calendar</h4>
+            <div class="summary-row"><span class="label">WhatsApp bot</span><span class="value">${val('f-wa-bot')}</span></div>
+            <div class="summary-row"><span class="label">Gmail</span><span class="value">${val('f-gmail')}</span></div>
+            <div class="summary-row"><span class="label">Responsable</span><span class="value">${val('f-resp-nombre')}</span></div>
+            <div class="summary-row"><span class="label">WA responsable</span><span class="value">${val('f-resp-wa')}</span></div>
+        </div>
+        <div class="summary-card"><h4>🤖 Personalización</h4>
+            <div class="summary-row"><span class="label">Tono</span><span class="value">${tono}</span></div>
+            <div class="summary-row"><span class="label">Trato</span><span class="value">${trato}</span></div>
+            <div class="summary-row"><span class="label">Nombre bot</span><span class="value">${val('f-bot-nombre') || 'Asistente de ' + val('f-nombre')}</span></div>
+        </div>`;
+}
+
+// ── SUBMIT ──
+async function submitForm() {
+    const btn = document.getElementById('btn-next');
+    btn.classList.add('sending');
+    btn.textContent = '⏳ Enviando…';
+
+    const tipo = getRadioVal('horario-tipo');
+    const data = {
+        clinica: { nombre: val('f-nombre'), ciudad: val('f-ciudad'), direccion: val('f-direccion') },
+        horarios: {
+            dias: getSelectedDays().map(d => d.num),
+            tipo: tipo,
+            manana: tipo === 'pausado' ? { inicio: val('f-man-inicio'), fin: val('f-man-fin') } : { inicio: val('f-hora-inicio'), fin: val('f-hora-fin') },
+            tarde: tipo === 'pausado' ? { inicio: val('f-tar-inicio'), fin: val('f-tar-fin') } : null,
+            duracion_cita_min: parseInt(val('f-duracion'))
+        },
+        servicios: getServices(),
+        whatsapp: { numero_bot: val('f-wa-bot'), gmail: val('f-gmail'), responsable_nombre: val('f-resp-nombre'), responsable_wa: val('f-resp-wa') },
+        personalizacion: { tono: getRadioVal('tono-grupo'), trato: getRadioVal('trato-grupo'), nombre_bot: val('f-bot-nombre'), faqs: getFaqs() },
+        timestamp: new Date().toISOString()
+    };
+
+    try {
+        const res = await fetch('https://camping.46.224.156.53.nip.io/webhook/onboarding-cliente', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+    } catch (e) {
+        console.warn('Webhook no disponible, datos guardados localmente:', e.message);
+        localStorage.setItem(STORAGE_KEY + '_submitted', JSON.stringify(data));
+    }
+
+    // Show success
+    document.querySelectorAll('.step').forEach(s => { s.classList.remove('active'); s.style.display = 'none'; });
+    const success = document.getElementById('step-success');
+    success.style.display = 'block';
+    success.classList.add('active');
+    document.getElementById('nav-bar').style.display = 'none';
+    document.querySelector('.progress-wrap').style.display = 'none';
+    localStorage.removeItem(STORAGE_KEY);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── SAVE/RESTORE PROGRESS ──
+function saveProgress() {
+    try {
+        const data = {
+            step: currentStep,
+            nombre: val('f-nombre'), ciudad: val('f-ciudad'), direccion: val('f-direccion'),
+            dias: getSelectedDays().map(d => d.num),
+            horarioTipo: getRadioVal('horario-tipo'),
+            horaInicio: val('f-hora-inicio'), horaFin: val('f-hora-fin'),
+            manInicio: val('f-man-inicio'), manFin: val('f-man-fin'),
+            tarInicio: val('f-tar-inicio'), tarFin: val('f-tar-fin'),
+            duracion: val('f-duracion'),
+            servicios: getServices(),
+            waBotNum: val('f-wa-bot'), gmail: val('f-gmail'),
+            respNombre: val('f-resp-nombre'), respWa: val('f-resp-wa'),
+            tono: getRadioVal('tono-grupo'), trato: getRadioVal('trato-grupo'),
+            botNombre: val('f-bot-nombre')
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {}
+}
+
+function restoreProgress() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const d = JSON.parse(raw);
+        if (d.nombre) document.getElementById('f-nombre').value = d.nombre;
+        if (d.ciudad) document.getElementById('f-ciudad').value = d.ciudad;
+        if (d.direccion) document.getElementById('f-direccion').value = d.direccion;
+        if (d.dias && d.dias.length) {
+            document.querySelectorAll('#dias-chips .chip').forEach(c => {
+                if (d.dias.includes(parseInt(c.dataset.day))) c.classList.add('selected');
+            });
+        }
+        if (d.horarioTipo) {
+            document.querySelectorAll('#horario-tipo .radio-card').forEach(c => {
+                c.classList.toggle('selected', c.dataset.val === d.horarioTipo);
+            });
+            toggleHorario();
+        }
+        if (d.horaInicio) document.getElementById('f-hora-inicio').value = d.horaInicio;
+        if (d.horaFin) document.getElementById('f-hora-fin').value = d.horaFin;
+        if (d.manInicio) document.getElementById('f-man-inicio').value = d.manInicio;
+        if (d.manFin) document.getElementById('f-man-fin').value = d.manFin;
+        if (d.tarInicio) document.getElementById('f-tar-inicio').value = d.tarInicio;
+        if (d.tarFin) document.getElementById('f-tar-fin').value = d.tarFin;
+        if (d.duracion) document.getElementById('f-duracion').value = d.duracion;
+        if (d.servicios && d.servicios.length) {
+            const list = document.getElementById('service-list');
+            list.innerHTML = '';
+            d.servicios.forEach(s => {
+                const item = document.createElement('div');
+                item.className = 'service-item';
+                item.innerHTML = `<input class="form-input" placeholder="Nombre del servicio" data-svc value="${s.nombre}"><input class="form-input dur-input" placeholder="Duración" data-dur value="${s.duracion || ''}"><button class="btn-remove" onclick="removeService(this)">✕</button>`;
+                list.appendChild(item);
+            });
+        }
+        if (d.waBotNum) document.getElementById('f-wa-bot').value = d.waBotNum;
+        if (d.gmail) document.getElementById('f-gmail').value = d.gmail;
+        if (d.respNombre) document.getElementById('f-resp-nombre').value = d.respNombre;
+        if (d.respWa) document.getElementById('f-resp-wa').value = d.respWa;
+        if (d.tono) {
+            document.querySelectorAll('#tono-grupo .radio-card').forEach(c => c.classList.toggle('selected', c.dataset.val === d.tono));
+        }
+        if (d.trato) {
+            document.querySelectorAll('#trato-grupo .radio-card').forEach(c => c.classList.toggle('selected', c.dataset.val === d.trato));
+        }
+        if (d.botNombre) document.getElementById('f-bot-nombre').value = d.botNombre;
+        if (d.step && d.step > 1) goToStep(d.step);
+    } catch (e) {}
+}
+
+// Auto-save on input
+document.addEventListener('input', () => { clearTimeout(window._saveTimer); window._saveTimer = setTimeout(saveProgress, 500); });
+</script>
+</body>
+</html>
